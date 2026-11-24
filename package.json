@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node --watch server/index.js",
-    "start": "node server/index.js",
+    "start": "node server/migrate.js && node server/index.js",
     "db:migrate": "node server/migrate.js",
     "owner:password": "node server/owner-password.js",
     "build": "vite build",
@@ -14,6 +14,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "aws4fetch": "^1.0.20",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",

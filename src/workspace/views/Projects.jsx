@@ -40,6 +40,7 @@ function Projects() {
                   <Pill tone={projectTone[project.status]}>{project.status}</Pill>
                   <Menu items={[
                     { label: 'Edit project', icon: 'edit', onSelect: () => openForm('project', project) },
+                    { label: 'Open in OVO Flow', icon: 'board', onSelect: () => navigate('flow', { project: project.id }) },
                     { label: 'View tasks', icon: 'tasks', onSelect: () => navigate('tasks', { project: project.id }) },
                     { label: 'Add task', icon: 'plus', onSelect: () => openForm('task', { projectId: project.id }) },
                     { label: 'Delete project', icon: 'trash', danger: true, onSelect: () => remove('project', project, `“${project.name}” and its ${project.taskCount} task${project.taskCount === 1 ? '' : 's'} will be permanently deleted.`) },

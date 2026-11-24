@@ -20,6 +20,7 @@ import Reports from './views/Reports.jsx'
 import Overview from './views/Overview.jsx'
 import Projects from './views/Projects.jsx'
 import Tasks from './views/Tasks.jsx'
+import Flow from './views/Flow.jsx'
 import Clients from './views/Clients.jsx'
 import Campaigns from './views/Campaigns.jsx'
 import Calendar from './views/Calendar.jsx'
@@ -30,9 +31,10 @@ import Billing from './views/Billing.jsx'
 import Settings from './views/Settings.jsx'
 import './workspace.css'
 import './ovo.css'
+import './flow.css'
 
 const views = {
-  overview: Overview, projects: Projects, tasks: Tasks, clients: Clients, campaigns: Campaigns,
+  overview: Overview, projects: Projects, tasks: Tasks, flow: Flow, clients: Clients, campaigns: Campaigns,
   calendar: Calendar, files: Files, vault: Files, chat: Chat, notifications: Notifications,
   billing: Billing, settings: Settings, sheets: Sheets, sheet: Sheet, forms: Forms, automations: Automations, updates: Updates, reports: Reports,
 }

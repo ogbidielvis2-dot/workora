@@ -2,6 +2,7 @@ import express from 'express'
 import { z } from 'zod'
 import { pool } from '../db.js'
 import { runAutomations } from '../automation.js'
+import { reconcileStage, taskSelect } from '../tasks-lib.js'
 import { requireAuth, requireRole } from '../auth.js'
 import {
   HttpError, MANAGERS, assertInOrg, assertMember, emailSchema, getSubscription, logActivity, notify,
@@ -296,16 +297,6 @@ router.delete('/projects/:id', managersOnly, route(async (request, response) => 
 
 // ---------------------------------------------------------------- Tasks
 
-const taskSelect = `
-  SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date AS "dueDate", t.progress,
-         (SELECT max(tu.created_at) FROM task_updates tu WHERE tu.task_id = t.id) AS "lastUpdateAt",
-         t.project_id AS "projectId", p.name AS "projectName",
-         t.assignee_id AS "assigneeId", u.full_name AS "assigneeName",
-         t.created_by AS "createdBy", t.created_at AS "createdAt"
-  FROM tasks t
-  LEFT JOIN users u ON u.id = t.assignee_id
-  LEFT JOIN projects p ON p.id = t.project_id`
-
 async function notifyAssignee(db, auth, task, previousAssigneeId) {
   if (task.assigneeId && task.assigneeId !== auth.userId && task.assigneeId !== previousAssigneeId) {
     await notify(db, auth.organizationId, task.assigneeId, {
@@ -365,6 +356,7 @@ router.put('/tasks/:id', managersOnly, route(async (request, response) => {
        WHERE id = $8`,
       [values.title, values.description || '', values.priority || 'Medium', values.status || null, values.dueDate || null, values.projectId || null, values.assigneeId || null, request.params.id],
     )
+    await reconcileStage(client, request.params.id)
     await logActivity(client, request.auth, 'updated task', 'task', values.title)
     const result = await client.query(`${taskSelect} WHERE t.id = $1`, [request.params.id])
     await notifyAssignee(client, request.auth, result.rows[0], previous.rows[0].assignee_id)
@@ -390,6 +382,7 @@ router.patch('/tasks/:id', route(async (request, response) => {
       [values.status, request.params.id, request.auth.organizationId, MANAGERS.includes(request.auth.role), request.auth.userId],
     )
     if (!updated.rowCount) throw new HttpError(404, 'Task not found or you do not have permission to update it.')
+    await reconcileStage(client, request.params.id)
     const result = await client.query(`${taskSelect} WHERE t.id = $1`, [request.params.id])
     const row = result.rows[0]
     await logActivity(client, request.auth, `moved task to ${values.status}`, 'task', row.title)
