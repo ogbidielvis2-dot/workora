@@ -5,14 +5,17 @@ import { api } from '../../lib/api.js'
 import { taskStatuses } from '../../lib/constants.js'
 import { dueLabel, formatDateTime, timeAgo } from '../../lib/format.js'
 import { useWorkspace } from '../context.js'
+import Focus from '../flow/Focus.jsx'
+import TaskPanel from '../flow/TaskPanel.jsx'
 
 const priorityTone = { Low: 'muted', Medium: 'neutral', High: 'warning', Urgent: 'danger' }
 
-function readView() {
+// Managers keep the board they know; everyone else lands on OVO Focus, their own work across projects.
+function readView(isManager) {
   try {
-    return localStorage.getItem('ovo.tasks.view') || 'board'
+    return localStorage.getItem('ovo.tasks.view') || (isManager ? 'board' : 'focus')
   } catch {
-    return 'board'
+    return isManager ? 'board' : 'focus'
   }
 }
 
@@ -139,8 +142,9 @@ function TaskCard({ task, canEdit, canMove, onStatus, draggable, onUpdate }) {
 }
 
 function Tasks() {
-  const { account, data, isManager, openForm, remove, patch, params, navigate, search } = useWorkspace()
-  const [layout, setLayout] = useState(readView)
+  const { account, data, isManager, openForm, remove, patch, params, navigate, search, reload, toast } = useWorkspace()
+  const [layout, setLayout] = useState(() => readView(isManager))
+  const [panelTask, setPanelTask] = useState(null)
   const [scope, setScope] = useState(isManager ? 'all' : 'mine')
   const [dropTarget, setDropTarget] = useState(null)
   const [updating, setUpdating] = useState(null)
@@ -174,20 +178,20 @@ function Tasks() {
       <PageHeader
         eyebrow="Workspace / Tasks"
         title={activeProject ? activeProject.name : isManager ? 'Tasks' : 'My tasks'}
-        description={activeProject ? 'Tasks in this project.' : isManager ? 'Assign work, set priorities and move tasks across the board.' : 'Everything assigned to you. Drag a card or change its status as you go.'}
+        description={layout === 'focus' ? 'Your work across every project: what is due today, what is coming and what is late.' : activeProject ? 'Tasks in this project.' : isManager ? 'Assign work, set priorities and move tasks across the board.' : 'Everything assigned to you. Drag a card or change its status as you go.'}
       >
         <Button icon="chart" onClick={() => navigate('reports')}>{isManager ? 'Team reports' : 'Weekly report'}</Button>
         {isManager && <Button variant="primary" icon="plus" onClick={() => openForm('task', { projectId: projectFilter || undefined })}>New task</Button>}
       </PageHeader>
 
       <div className="toolbar-row">
-        {isManager && (
+        {isManager && layout !== 'focus' && (
           <Segmented label="Task scope" value={scope} onChange={setScope} options={[
             { value: 'all', label: 'All tasks', count: data.tasks.filter((task) => !projectFilter || task.projectId === projectFilter).length },
             { value: 'mine', label: 'Assigned to me', count: data.tasks.filter((task) => task.assigneeId === account.user.id && (!projectFilter || task.projectId === projectFilter)).length },
           ]} />
         )}
-        {isManager && data.projects.length > 0 && (
+        {isManager && layout !== 'focus' && data.projects.length > 0 && (
           <select className="filter-select" aria-label="Filter by project" value={projectFilter} onChange={(event) => navigate('tasks', event.target.value ? { project: event.target.value } : {})}>
             <option value="">All projects</option>
             {data.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
@@ -195,12 +199,15 @@ function Tasks() {
         )}
         <div className="spacer" />
         <Segmented label="Layout" value={layout} onChange={changeLayout} options={[
+          { value: 'focus', label: 'Focus', icon: 'target' },
           { value: 'board', label: 'Board', icon: 'board' },
           { value: 'list', label: 'List', icon: 'list' },
         ]} />
       </div>
 
-      {!data.tasks.length ? (
+      {layout === 'focus' ? (
+        <Focus onOpen={(task) => setPanelTask(task.id)} />
+      ) : !data.tasks.length ? (
         <Empty icon="tasks" title={isManager ? 'No tasks yet' : 'No tasks assigned to you'}
           action={isManager && <Button variant="primary" icon="plus" onClick={() => openForm('task')}>Create a task</Button>}>
           {isManager ? 'Break projects into tasks and assign them to your team.' : 'When a manager assigns you a task you’ll get a notification.'}
@@ -269,6 +276,14 @@ function Tasks() {
         </div>
       )}
       {updating && <TaskUpdateModal task={updating} onClose={() => setUpdating(null)} />}
+      {panelTask && (
+        <TaskPanel
+          taskId={panelTask} members={data.members} canManage={isManager} toast={toast}
+          onClose={() => setPanelTask(null)}
+          onChange={() => reload(['tasks', 'projects', 'dashboard'])}
+          onDelete={(task) => { setPanelTask(null); remove('task', task) }}
+        />
+      )}
     </div>
   )
 }

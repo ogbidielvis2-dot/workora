@@ -23,6 +23,7 @@ import shareRoutes, { publicShareRouter } from './routes/shares.js'
 import sheetRoutes from './routes/sheets.js'
 import teamRoutes from './routes/team.js'
 import workspaceRoutes from './routes/workspace.js'
+import flowRoutes from './routes/flow.js'
 
 if (
   !process.env.SESSION_SECRET ||
@@ -76,6 +77,7 @@ app.use('/api', publicRoutes)
 app.use('/api', publicFormRouter)
 app.use('/api', publicShareRouter)
 app.use('/api', publicBillingRouter)
+app.use('/api/flow', flowRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api', workspaceRoutes)
 app.use('/api', teamRoutes)
